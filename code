@@ -1,0 +1,45 @@
+#include <SoftwareSerial.h>
+#include <SPI.h>
+
+SoftwareSerial gsm(8, 9); // RX, TX for GSM module
+int pirPin = 7;           // PIR motion sensor connected to pin 7
+int pirState = LOW;       // Variable to hold the PIR sensor state
+int val = 0;              // Variable to store the sensor value
+
+void setup() {
+  pinMode(pirPin, INPUT);  // Set PIR pin as input
+  gsm.begin(9600);         // Initialize GSM module
+  Serial.begin(9600);      // Initialize serial monitor for debugging
+
+  delay(1000);             // Give time to settle the system
+}
+
+void loop() {
+  val = digitalRead(pirPin); // Read the PIR sensor value
+  if (val == HIGH) {         // If motion is detected
+    if (pirState == LOW) {
+      // Motion detected, send an alert
+      Serial.println("Motion detected!");
+      gsm.println("AT+CMGF=1");        // Set SMS mode
+      delay(1000);
+      gsm.println("AT+CMGS=\"+1234567890\"");  // Owner's phone number (update this)
+      delay(1000);
+      gsm.println("Intruder Alert: Motion detected after business hours!"); // SMS message
+      delay(100);
+      gsm.println((char)26); // Send SMS
+      delay(1000);
+
+      // Make a call to the owner
+      gsm.println("ATD+1234567890;"); // Owner's phone number (update this)
+      delay(10000); // Wait for a while before hanging up
+      gsm.println("ATH"); // Hang up call
+    }
+    pirState = HIGH;
+  } else {
+    if (pirState == HIGH) {
+      Serial.println("Motion ended.");
+      pirState = LOW;
+    }
+  }
+  delay(100);
+}
